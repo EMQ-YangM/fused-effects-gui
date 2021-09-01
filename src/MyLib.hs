@@ -2,6 +2,8 @@
 
 module MyLib where
 
+import Data.Text (Text, pack)
+import Foreign.C.Types (CInt)
 import SDL
 import SDL.Font as SF
 import SDL.Framerate
@@ -32,8 +34,8 @@ main = do
         putStrLn $ "eventWatch windowSizeChanged: " ++ show sizeChangeData
       _ -> return ()
   fm <- manager
-  set fm 16
-  font <- load "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" 10
+  set fm 30
+  font <- load "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" 20
   appLoop renderer font
 
 blue = V4 0 0 255 255
@@ -48,20 +50,10 @@ appLoop renderer font = do
       clear renderer
       rendererDrawColor renderer $= V4 255 0 0 255
       -- drawLine renderer (P $ V2 0 0) (P $ V2 400 300)
-      thickLine renderer 0 300 10 blue
-      fillCircle renderer 300 20 blue
-      (w, h) <- size font "wellcome haskell"
-      sur <- blended font blue "wellcome haskell!"
-      texture <- createTextureFromSurface renderer sur
-      copy
-        renderer
-        texture
-        Nothing
-        ( Just $
-            Rectangle
-              300
-              (V2 (fromIntegral w) (fromIntegral h ))
-        )
+      -- thickLine renderer 0 300 10 blue
+      -- fillCircle renderer 300 20 blue
+      let val = "wellcome haskell!!!!!!"
+      renderFont font renderer val (P 30)
       present renderer
       case eventPayload ev of
         WindowSizeChangedEvent sizeChangeData -> do
@@ -71,4 +63,26 @@ appLoop renderer font = do
           | keyboardEventKeyMotion keyboardEvent == Pressed
               && keysymKeycode (keyboardEventKeysym keyboardEvent) == KeycodeQ ->
             return ()
+        MouseMotionEvent mv@(MouseMotionEventData _ _ _ p _) -> do
+          let val = pack (show p)
+          renderFont font renderer val (fmap fromIntegral p)
+          present renderer
+          waitEvent >>= go
         _ -> waitEvent >>= go
+
+renderFont :: Font -> Renderer -> Text -> Point V2 CInt -> IO ()
+renderFont font renderer val pos = do
+  (w, h) <- size font val
+  sur <- blended font blue val
+  texture <- createTextureFromSurface renderer sur
+  copy
+    renderer
+    texture
+    Nothing
+    ( Just $
+        Rectangle
+          pos
+          (V2 (fromIntegral w) (fromIntegral h))
+    )
+  freeSurface sur
+  destroyTexture texture
