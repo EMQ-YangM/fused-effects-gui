@@ -76,13 +76,13 @@ class WidgetRender a where
       renderer <- asks _renderer
       liftIO $ do
         rendererDrawColor renderer $= _backgroundColor w
-        drawRect renderer (Just $ Rectangle (fmap fromIntegral bp) (V2 (fromIntegral (_width w)) (fromIntegral (_height w))))
+        drawRect renderer (Just $ Rectangle (fmap fromIntegral bp) (V2 (fromIntegral (_width w)) (fromIntegral (_heigh w))))
       renderSelf bp w
       forM_ (_children w) $ \(bpc, SomeWidget w) -> render (bp + bpc) w
 
 data Widget model = Widget
   { _width :: Int,
-    _height :: Int,
+    _heigh :: Int,
     _model :: model,
     _backgroundColor :: V4 Word8,
     _frontColor :: V4 Word8,
@@ -102,8 +102,14 @@ makeLenses ''Widget
 makeLenses ''UIState
 makeLenses ''UIEnv
 
-updatePos :: Int -> SomeWidget -> SomeWidget
-updatePos i (SomeWidget w) = SomeWidget (w {_width = i})
-
 children' :: Lens' SomeWidget [(BasePositon, SomeWidget)]
 children' = lens (\(SomeWidget w) -> w ^. children) (\(SomeWidget w) a -> SomeWidget (w & children .~ a))
+
+width' :: Lens' SomeWidget Int
+width' = lens (\(SomeWidget w) -> w ^. width) (\(SomeWidget w) a -> SomeWidget (w & width .~ a))
+
+height' :: Lens' SomeWidget Int
+height' = lens (\(SomeWidget w) -> w ^. heigh) (\(SomeWidget w) a -> SomeWidget (w & heigh .~ a))
+
+-- model' :: (WidgetRender model, WidgetHandler model) => Lens' SomeWidget model
+-- model' = lens (\(SomeWidget w) -> w ^. model) (\(SomeWidget w) a -> SomeWidget (w & model .~ a))

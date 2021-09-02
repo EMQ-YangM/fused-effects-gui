@@ -22,7 +22,7 @@ import Control.Algebra
 import Control.Carrier.Lift
 import Control.Carrier.Reader
 import Control.Carrier.State.Strict
-import Control.Effect.Optics ((%=), (.=))
+import Control.Effect.Optics (use, (%=), (.=))
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable (forM_)
@@ -30,7 +30,7 @@ import Data.Kind
 import Data.Text (Text, pack)
 import Data.Word (Word8)
 import MyLib
-import Optics
+import Optics ((%))
 -- import Optics
 import SDL
 import SDL.Font as SF
@@ -44,13 +44,13 @@ bodyWidget' :: Widget Body
 bodyWidget' =
   Widget
     { _width = 100,
-      _height = 100,
+      _heigh = 100,
       _model = Body,
       _backgroundColor = 255,
       _frontColor = 90,
       _visible = True,
       _path = [],
-      _children = [(100, SomeWidget (modelWidget [1]))]
+      _children = []
     }
 
 instance WidgetRender Body where
@@ -62,7 +62,8 @@ instance WidgetHandler Body where
   handler e a = do
     case eventPayload e of
       (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
-        let newmw = modelWidget [2]
+        cs <- use $ bodyWidget % children'
+        let newmw = modelWidget [length cs]
         bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
       _ -> return ()
     return a
@@ -80,7 +81,7 @@ modelWidget :: [Int] -> Widget Model
 modelWidget path =
   Widget
     { _width = 100,
-      _height = 100,
+      _heigh = 100,
       _model = Model 1,
       _backgroundColor = 30,
       _frontColor = V4 0 0 0 255,
