@@ -102,6 +102,9 @@ makeLenses ''Widget
 makeLenses ''UIState
 makeLenses ''UIEnv
 
+renderSomeWidget :: (UI sig m, MonadIO m) => BasePositon -> SomeWidget -> m ()
+renderSomeWidget bp (SomeWidget w) = renderSelf bp w
+
 children' :: Lens' SomeWidget [(BasePositon, SomeWidget)]
 children' = lens (\(SomeWidget w) -> w ^. children) (\(SomeWidget w) a -> SomeWidget (w & children .~ a))
 

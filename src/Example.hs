@@ -138,7 +138,9 @@ appLoop1 = go
       SomeWidget bodyW <- gets _bodyWidget
       handler e Body
 
-      render 0 bodyW
+      -- TODO: dispatch event to focus widget
+
+      use bodyWidget >>= renderSomeWidget 0
 
       renderer <- asks _renderer
       present renderer
