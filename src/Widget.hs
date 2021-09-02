@@ -46,7 +46,7 @@ data UIEnv = UIEnv
   }
 
 data UIState = UIState
-  { _bodyWidges :: SomeWidget,
+  { _bodyWidget :: SomeWidget,
     _focus :: [Int]
   }
 
@@ -104,102 +104,3 @@ makeLenses ''UIEnv
 
 updatePos :: Int -> SomeWidget -> SomeWidget
 updatePos i (SomeWidget w) = SomeWidget (w {_width = i})
-
-data Body = Body
-
-bodyWidget :: Widget Body
-bodyWidget =
-  Widget
-    { _width = 100,
-      _height = 100,
-      _model = Body,
-      _backgroundColor = 255,
-      _frontColor = 90,
-      _visible = True,
-      _path = [],
-      _children = []
-    }
-
-instance WidgetRender Body where
-  renderSelf bp w@Widget {..} = do
-    renderer <- asks _renderer
-    clear renderer
-
-instance WidgetHandler w where
-  handler e a = return a
-
-makeUIState :: UIState
-makeUIState =
-  UIState
-    { _bodyWidges = SomeWidget bodyWidget,
-      _focus = []
-    }
-
-newtype Model = Model Int deriving (Show)
-
-modelWidget :: [Int] -> Widget Model
-modelWidget path =
-  Widget
-    { _width = 100,
-      _height = 100,
-      _model = Model 1,
-      _backgroundColor = 30,
-      _frontColor = 90,
-      _visible = True,
-      _path = path,
-      _children = []
-    }
-
-instance WidgetRender Model where
-  renderSelf bp w@Widget {..} = do
-    renderer <- asks _renderer
-    font <- asks _font
-    liftIO $ do
-      rendererDrawColor renderer $= _frontColor
-      renderFont font renderer (pack $ show _model) (fmap fromIntegral bp)
-
-initGUI :: IO (Renderer, Font)
-initGUI = do
-  initializeAll
-  SF.initialize
-  window <-
-    createWindow
-      "resize"
-      WindowConfig
-        { windowBorder = True,
-          windowHighDPI = False,
-          windowInputGrabbed = False,
-          windowMode = Windowed,
-          windowGraphicsContext = NoGraphicsContext,
-          windowPosition = Wherever,
-          windowResizable = True,
-          windowInitialSize = V2 800 600,
-          windowVisible = True
-        }
-  renderer <- createRenderer window (-1) defaultRenderer
-  addEventWatch $ \ev ->
-    case eventPayload ev of
-      WindowSizeChangedEvent sizeChangeData ->
-        putStrLn $ "eventWatch windowSizeChanged: " ++ show sizeChangeData
-      _ -> return ()
-  fm <- manager
-  SDL.Framerate.set fm 30
-  font <- load "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" 20
-  return (renderer, font)
-
-appLoop1 :: forall sig m. (UI sig m, MonadIO m) => m ()
-appLoop1 = go
-  where
-    go = do
-      e <- liftIO waitEvent
-      SomeWidget bodyW <- gets _bodyWidges
-      handler e Body
-
-      render 0 bodyW
-      go
-
-tmain :: IO ()
-tmain = do
-  (r, f) <- initGUI
-  runReader (UIEnv r f) $ runState makeUIState appLoop1
-  undefined

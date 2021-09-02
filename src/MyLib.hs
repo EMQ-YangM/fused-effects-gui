@@ -53,7 +53,7 @@ appLoop renderer font = do
       -- thickLine renderer 0 300 10 blue
       -- fillCircle renderer 300 20 blue
       let val = "wellcome haskell!!!!!!"
-      renderFont font renderer val (P 30)
+      renderFont font renderer val (P 30) blue
       present renderer
       case eventPayload ev of
         WindowSizeChangedEvent sizeChangeData -> do
@@ -65,15 +65,15 @@ appLoop renderer font = do
             return ()
         MouseMotionEvent mv@(MouseMotionEventData _ _ _ p _) -> do
           let val = pack (show p)
-          renderFont font renderer val (fmap fromIntegral p)
+          renderFont font renderer val (fmap fromIntegral p) blue
           present renderer
           waitEvent >>= go
         _ -> waitEvent >>= go
 
-renderFont :: Font -> Renderer -> Text -> Point V2 CInt -> IO ()
-renderFont font renderer val pos = do
+renderFont :: Font -> Renderer -> Text -> Point V2 CInt -> SF.Color -> IO ()
+renderFont font renderer val pos color = do
   (w, h) <- size font val
-  sur <- blended font blue val
+  sur <- blended font color val
   texture <- createTextureFromSurface renderer sur
   copy
     renderer
