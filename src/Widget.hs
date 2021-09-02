@@ -45,12 +45,12 @@ data UIEnv = UIEnv
     _font :: Font
   }
 
-data UIState sig m = UIState
-  { _bodyWidges :: SomeWidget sig m,
+data UIState = UIState
+  { _bodyWidges :: SomeWidget,
     _focus :: [Int]
   }
 
-type UI sig m = Has (Reader UIEnv :+: State (UIState sig m)) sig m --- very cool!!!!!!
+type UI sig m = Has (Reader UIEnv :+: State UIState) sig m --- very cool!!!!!!
 
 --
 --
@@ -60,17 +60,17 @@ type UI sig m = Has (Reader UIEnv :+: State (UIState sig m)) sig m --- very cool
 
 -- type Event' = Int
 
-class (UI sig m, MonadIO m) => WidgetHandler sig m a where
-  handler :: Event -> a -> m a
+class WidgetHandler a where
+  handler :: (UI sig m, MonadIO m) => Event -> a -> m a
 
 --   handler :: Event' -> Widget sig m a -> m ()
 
 type BasePositon = Point V2 Int
 
-class (UI sig m, MonadIO m) => WidgetRender sig m a where
-  renderSelf :: BasePositon -> Widget sig m a -> m ()
+class WidgetRender a where
+  renderSelf :: (UI sig m, MonadIO m) => BasePositon -> Widget a -> m ()
 
-  render :: BasePositon -> Widget sig m a -> m ()
+  render :: (UI sig m, MonadIO m) => BasePositon -> Widget a -> m ()
   render bp w = do
     when (_visible w) $ do
       renderer <- asks _renderer
@@ -80,7 +80,7 @@ class (UI sig m, MonadIO m) => WidgetRender sig m a where
       renderSelf bp w
       forM_ (_children w) $ \(bpc, SomeWidget w) -> render (bp + bpc) w
 
-data Widget sig m model = Widget
+data Widget model = Widget
   { _width :: Int,
     _height :: Int,
     _model :: model,
@@ -88,26 +88,26 @@ data Widget sig m model = Widget
     _frontColor :: V4 Word8,
     _visible :: Bool,
     _path :: [Int],
-    _children :: [(BasePositon, SomeWidget sig m)]
+    _children :: [(BasePositon, SomeWidget)]
   }
 
-data SomeWidget sig m
+data SomeWidget
   = forall a.
-    ( WidgetRender sig m a,
-      WidgetHandler sig m a
+    ( WidgetRender a,
+      WidgetHandler a
     ) =>
-    SomeWidget (Widget sig m a)
+    SomeWidget (Widget a)
 
 makeLenses ''Widget
 makeLenses ''UIState
 makeLenses ''UIEnv
 
-updatePos :: Int -> SomeWidget sig m -> SomeWidget sig m
+updatePos :: Int -> SomeWidget -> SomeWidget
 updatePos i (SomeWidget w) = SomeWidget (w {_width = i})
 
 data Body = Body
 
-bodyWidget :: Widget sig m Body
+bodyWidget :: Widget Body
 bodyWidget =
   Widget
     { _width = 100,
@@ -120,15 +120,15 @@ bodyWidget =
       _children = []
     }
 
-instance (UI sig m, MonadIO m) => WidgetRender sig m Body where
+instance WidgetRender Body where
   renderSelf bp w@Widget {..} = do
     renderer <- asks _renderer
     clear renderer
 
-instance (UI sig m, MonadIO m) => WidgetHandler sig m w where
+instance WidgetHandler w where
   handler e a = return a
 
-makeUIState :: (UI sig m, MonadIO m) => UIState sig m
+makeUIState :: UIState
 makeUIState =
   UIState
     { _bodyWidges = SomeWidget bodyWidget,
@@ -137,7 +137,7 @@ makeUIState =
 
 newtype Model = Model Int deriving (Show)
 
-modelWidget :: [Int] -> Widget sig m Model
+modelWidget :: [Int] -> Widget Model
 modelWidget path =
   Widget
     { _width = 100,
@@ -150,7 +150,7 @@ modelWidget path =
       _children = []
     }
 
-instance (UI sig m, MonadIO m) => WidgetRender sig m Model where
+instance WidgetRender Model where
   renderSelf bp w@Widget {..} = do
     renderer <- asks _renderer
     font <- asks _font
@@ -192,7 +192,7 @@ appLoop1 = go
   where
     go = do
       e <- liftIO waitEvent
-      SomeWidget bodyW <- gets @(UIState sig m) _bodyWidges
+      SomeWidget bodyW <- gets _bodyWidges
       handler e Body
 
       render 0 bodyW
@@ -201,5 +201,5 @@ appLoop1 = go
 tmain :: IO ()
 tmain = do
   (r, f) <- initGUI
-  runReader (UIEnv r f) $ runState makeUIState $ appLoop1
+  runReader (UIEnv r f) $ runState makeUIState appLoop1
   undefined
