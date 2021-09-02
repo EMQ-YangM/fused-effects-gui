@@ -87,7 +87,10 @@ modelWidget path =
       _frontColor = V4 0 0 0 255,
       _visible = True,
       _path = path,
-      _children = []
+      _children =
+        [ (15, SomeWidget $ textWidget [1, 2]),
+          (25, SomeWidget $ textWidget [1, 2])
+        ]
     }
 
 instance WidgetRender Model where
@@ -100,6 +103,29 @@ instance WidgetRender Model where
 instance WidgetHandler Model where
   handler e a = do
     return a
+
+textWidget :: [Int] -> Widget Text
+textWidget path =
+  Widget
+    { _width = 100,
+      _heigh = 100,
+      _model = "welcome haskell",
+      _backgroundColor = 30,
+      _frontColor = V4 255 0 0 255,
+      _visible = True,
+      _path = path,
+      _children = []
+    }
+
+instance WidgetRender Text where
+  renderSelf bp w@Widget {..} = do
+    renderer <- asks _renderer
+    font <- asks _font
+    liftIO $ do
+      renderFont font renderer _model (fmap fromIntegral bp) _frontColor
+
+instance WidgetHandler Text where
+  handler e a = return a
 
 initGUI :: IO (Renderer, Font)
 initGUI = do
