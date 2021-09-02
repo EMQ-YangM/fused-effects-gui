@@ -104,3 +104,6 @@ makeLenses ''UIEnv
 
 updatePos :: Int -> SomeWidget -> SomeWidget
 updatePos i (SomeWidget w) = SomeWidget (w {_width = i})
+
+children' :: Lens' SomeWidget [(BasePositon, SomeWidget)]
+children' = lens (\(SomeWidget w) -> w ^. children) (\(SomeWidget w) a -> SomeWidget (w & children .~ a))

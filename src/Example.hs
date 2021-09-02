@@ -22,7 +22,7 @@ import Control.Algebra
 import Control.Carrier.Lift
 import Control.Carrier.Reader
 import Control.Carrier.State.Strict
-import Control.Effect.Optics ((.=))
+import Control.Effect.Optics ((%=), (.=))
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable (forM_)
@@ -63,8 +63,7 @@ instance WidgetHandler Body where
     case eventPayload e of
       (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
         let newmw = modelWidget [2]
-        SomeWidget b <- gets _bodyWidget
-        bodyWidget .= SomeWidget (b & children %~ ((fmap fromIntegral pos, SomeWidget newmw) :))
+        bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
       _ -> return ()
     return a
 
