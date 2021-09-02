@@ -1,11 +1,17 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -13,6 +19,7 @@
 module Widget where
 
 import Control.Algebra
+import Control.Carrier.Lift
 import Control.Carrier.Reader
 import Control.Carrier.State.Strict
 import Control.Monad
@@ -24,7 +31,9 @@ import Data.Word (Word8)
 import MyLib
 import Optics
 import SDL
-import SDL.Font
+import SDL.Font as SF
+import SDL.Framerate
+import SDL.Primitive
 
 {-
 Widget m
@@ -37,7 +46,7 @@ data UIEnv = UIEnv
   }
 
 data UIState sig m = UIState
-  { _bodyWidges :: [SomeWidget sig m],
+  { _bodyWidges :: SomeWidget sig m,
     _focus :: [Int]
   }
 
@@ -49,7 +58,12 @@ type UI sig m = Has (Reader UIEnv :+: State (UIState sig m)) sig m --- very cool
 --  WidgetMoveChild in event
 --
 
-class WidgetHandler
+-- type Event' = Int
+
+class (UI sig m, MonadIO m) => WidgetHandler sig m a where
+  handler :: Event -> a -> m a
+
+--   handler :: Event' -> Widget sig m a -> m ()
 
 type BasePositon = Point V2 Int
 
@@ -73,10 +87,16 @@ data Widget sig m model = Widget
     _backgroundColor :: V4 Word8,
     _frontColor :: V4 Word8,
     _visible :: Bool,
+    _path :: [Int],
     _children :: [(BasePositon, SomeWidget sig m)]
   }
 
-data SomeWidget sig m = forall a. (WidgetRender sig m a) => SomeWidget (Widget sig m a)
+data SomeWidget sig m
+  = forall a.
+    ( WidgetRender sig m a,
+      WidgetHandler sig m a
+    ) =>
+    SomeWidget (Widget sig m a)
 
 makeLenses ''Widget
 makeLenses ''UIState
@@ -85,10 +105,40 @@ makeLenses ''UIEnv
 updatePos :: Int -> SomeWidget sig m -> SomeWidget sig m
 updatePos i (SomeWidget w) = SomeWidget (w {_width = i})
 
+data Body = Body
+
+bodyWidget :: Widget sig m Body
+bodyWidget =
+  Widget
+    { _width = 100,
+      _height = 100,
+      _model = Body,
+      _backgroundColor = 255,
+      _frontColor = 90,
+      _visible = True,
+      _path = [],
+      _children = []
+    }
+
+instance (UI sig m, MonadIO m) => WidgetRender sig m Body where
+  renderSelf bp w@Widget {..} = do
+    renderer <- asks _renderer
+    clear renderer
+
+instance (UI sig m, MonadIO m) => WidgetHandler sig m w where
+  handler e a = return a
+
+makeUIState :: (UI sig m, MonadIO m) => UIState sig m
+makeUIState =
+  UIState
+    { _bodyWidges = SomeWidget bodyWidget,
+      _focus = []
+    }
+
 newtype Model = Model Int deriving (Show)
 
-modelWidget :: Widget sig m Model
-modelWidget =
+modelWidget :: [Int] -> Widget sig m Model
+modelWidget path =
   Widget
     { _width = 100,
       _height = 100,
@@ -96,6 +146,7 @@ modelWidget =
       _backgroundColor = 30,
       _frontColor = 90,
       _visible = True,
+      _path = path,
       _children = []
     }
 
@@ -106,3 +157,49 @@ instance (UI sig m, MonadIO m) => WidgetRender sig m Model where
     liftIO $ do
       rendererDrawColor renderer $= _frontColor
       renderFont font renderer (pack $ show _model) (fmap fromIntegral bp)
+
+initGUI :: IO (Renderer, Font)
+initGUI = do
+  initializeAll
+  SF.initialize
+  window <-
+    createWindow
+      "resize"
+      WindowConfig
+        { windowBorder = True,
+          windowHighDPI = False,
+          windowInputGrabbed = False,
+          windowMode = Windowed,
+          windowGraphicsContext = NoGraphicsContext,
+          windowPosition = Wherever,
+          windowResizable = True,
+          windowInitialSize = V2 800 600,
+          windowVisible = True
+        }
+  renderer <- createRenderer window (-1) defaultRenderer
+  addEventWatch $ \ev ->
+    case eventPayload ev of
+      WindowSizeChangedEvent sizeChangeData ->
+        putStrLn $ "eventWatch windowSizeChanged: " ++ show sizeChangeData
+      _ -> return ()
+  fm <- manager
+  SDL.Framerate.set fm 30
+  font <- load "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" 20
+  return (renderer, font)
+
+appLoop1 :: forall sig m. (UI sig m, MonadIO m) => m ()
+appLoop1 = go
+  where
+    go = do
+      e <- liftIO waitEvent
+      SomeWidget bodyW <- gets @(UIState sig m) _bodyWidges
+      handler e Body
+
+      render 0 bodyW
+      go
+
+tmain :: IO ()
+tmain = do
+  (r, f) <- initGUI
+  runReader (UIEnv r f) $ runState makeUIState $ appLoop1
+  undefined
