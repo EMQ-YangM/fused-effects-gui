@@ -59,14 +59,15 @@ instance WidgetRender Body where
     clear renderer
 
 instance WidgetHandler Body where
-  handler e a = do
-    case eventPayload e of
-      (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
-        cs <- use $ bodyWidget % children'
-        let newmw = modelWidget [length cs]
-        bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
-      _ -> return ()
-    return a
+  handler es a = mapM_ handler1 es >> return a
+    where
+      handler1 e = do
+        case eventPayload e of
+          (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
+            cs <- use $ bodyWidget % children'
+            let newmw = modelWidget [length cs]
+            bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
+          _ -> return ()
 
 makeUIState :: UIState
 makeUIState =
@@ -77,7 +78,7 @@ makeUIState =
 
 newtype Model = Model Int deriving (Show)
 
-mkp :: Int -> Int -> BasePositon 
+mkp :: Int -> Int -> BasePositon
 mkp x y = P $ V2 x y
 
 modelWidget :: [Int] -> Widget Model
@@ -130,7 +131,7 @@ instance WidgetRender Text where
 instance WidgetHandler Text where
   handler e a = return a
 
-initGUI :: IO (Renderer, Font)
+initGUI :: IO (Renderer, Font, Manager)
 initGUI = do
   initializeAll
   SF.initialize
@@ -154,16 +155,16 @@ initGUI = do
       WindowSizeChangedEvent sizeChangeData ->
         putStrLn $ "eventWatch windowSizeChanged: " ++ show sizeChangeData
       _ -> return ()
-  fm <- manager
+  fm <- SDL.Framerate.manager
   SDL.Framerate.set fm 30
   font <- load "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf" 20
-  return (renderer, font)
+  return (renderer, font, fm)
 
 appLoop1 :: forall sig m. (UI sig m, MonadIO m) => m ()
 appLoop1 = go
   where
     go = do
-      e <- liftIO waitEvent
+      e <- liftIO pollEvents
       SomeWidget bodyW <- gets _bodyWidget
       handler e Body
 
@@ -173,10 +174,12 @@ appLoop1 = go
 
       renderer <- asks _renderer
       present renderer
+      man <- asks _manager
+      delay_ man
       go
 
 main :: IO ()
 main = do
-  (r, f) <- initGUI
-  runReader (UIEnv r f) $ runState makeUIState appLoop1
+  (r, f, m) <- initGUI
+  runReader (UIEnv r f m) $ runState makeUIState appLoop1
   return ()

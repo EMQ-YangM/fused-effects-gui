@@ -42,7 +42,8 @@ Widget m
 
 data UIEnv = UIEnv
   { _renderer :: Renderer,
-    _font :: Font
+    _font :: Font,
+    _manager :: Manager
   }
 
 data UIState = UIState
@@ -61,7 +62,7 @@ type UI sig m = Has (Reader UIEnv :+: State UIState) sig m --- very cool!!!!!!
 -- type Event' = Int
 
 class WidgetHandler a where
-  handler :: (UI sig m, MonadIO m) => Event -> a -> m a
+  handler :: (UI sig m, MonadIO m) => [Event] -> a -> m a
 
 --   handler :: Event' -> Widget sig m a -> m ()
 
