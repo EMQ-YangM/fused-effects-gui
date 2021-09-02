@@ -77,6 +77,9 @@ makeUIState =
 
 newtype Model = Model Int deriving (Show)
 
+mkp :: Int -> Int -> BasePositon 
+mkp x y = P $ V2 x y
+
 modelWidget :: [Int] -> Widget Model
 modelWidget path =
   Widget
@@ -88,8 +91,8 @@ modelWidget path =
       _visible = True,
       _path = path,
       _children =
-        [ (15, SomeWidget $ textWidget [1, 2]),
-          (25, SomeWidget $ textWidget [1, 2])
+        [ (mkp 15 15, SomeWidget $ textWidget [1, 2]),
+          (mkp 15 40, SomeWidget $ textWidget [1, 2])
         ]
     }
 
@@ -107,9 +110,9 @@ instance WidgetHandler Model where
 textWidget :: [Int] -> Widget Text
 textWidget path =
   Widget
-    { _width = 100,
-      _heigh = 100,
-      _model = "welcome haskell",
+    { _width = 80,
+      _heigh = 30,
+      _model = "welcome ",
       _backgroundColor = 30,
       _frontColor = V4 255 0 0 255,
       _visible = True,
