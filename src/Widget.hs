@@ -35,6 +35,7 @@ import SDL.Font as SF
 import SDL.Framerate
 import SDL.Primitive
 import Data.Typeable
+import Data.Dynamic
 
 {-
 Widget m
@@ -45,7 +46,7 @@ data UIEnv = UIEnv
   { _renderer :: Renderer,
     _font :: Font,
     _manager :: Manager,
-    _getUserEvent :: forall a. Typeable a => Event -> IO (Maybe a)
+    _getUserEvent :: Event -> IO (Maybe Dynamic)
   }
 
 data UIState = UIState
