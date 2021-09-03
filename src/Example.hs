@@ -27,11 +27,14 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable (forM_)
 import Data.Kind
+-- import Optics
+
+import Data.Maybe
 import Data.Text (Text, pack)
 import Data.Word (Word8)
+import GHC.Real (Integral)
 import MyLib
-import Optics ((%))
--- import Optics
+import Optics (ix, (%), (^.), _1)
 import SDL
 import SDL.Font as SF
 import SDL.Framerate
@@ -50,7 +53,10 @@ bodyWidget' =
       _frontColor = 90,
       _visible = True,
       _path = [],
-      _children = []
+      _children =
+        [ (10, SomeWidget (modelWidget [0])),
+          (110, SomeWidget (modelWidget [1]))
+        ]
     }
 
 instance WidgetRender Body where
@@ -58,15 +64,32 @@ instance WidgetRender Body where
     renderer <- asks _renderer
     clear renderer
 
+inRectangle :: (Ord a, Num a, Integral b) => Point V2 a -> Rectangle b -> Bool
+inRectangle (P v0@(V2 x0 y0)) (Rectangle (P vs) size) =
+  let V2 x1 y1 = fmap fromIntegral vs
+      V2 x2 y2 = fmap fromIntegral (vs + size)
+   in x0 > x1 && x0 < x2 && y0 > y1 && y0 < y2
+
+-- v0 > fmap fromIntegral vs && v0 < fmap fromIntegral (vs + size)
+
 instance WidgetHandler Body where
   handler es a = mapM_ handler1 es >> return a
     where
       handler1 e = do
         case eventPayload e of
-          (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
-            cs <- use $ bodyWidget % children'
-            let newmw = modelWidget [length cs]
-            bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
+          -- (MouseButtonEvent (MouseButtonEventData _ Pressed _ ButtonLeft _ pos)) -> do
+          --   cs <- use $ bodyWidget % children'
+          --   let newmw = modelWidget [length cs]
+          --   bodyWidget % children' %= ((fmap fromIntegral pos, SomeWidget newmw) :)
+          -- drag model
+          (MouseMotionEvent (MouseMotionEventData _ _ [ButtonLeft] pos relPos)) -> do
+            ls <- use (bodyWidget % children')
+            let vs = map (\(bp, sw) -> (Rectangle bp (V2 (sw ^. width') (sw ^. height')), sw ^. path')) ls
+                posIn = listToMaybe $ map snd $ filter (inRectangle pos . Prelude.fst) vs
+            case posIn of
+              Just [i] -> do
+                bodyWidget % children' % ix i % _1 %= (\(P v) -> P $ v + fmap fromIntegral relPos)
+              _ -> return ()
           _ -> return ()
 
 makeUIState :: UIState
@@ -92,8 +115,8 @@ modelWidget path =
       _visible = True,
       _path = path,
       _children =
-        [ (mkp 15 15, SomeWidget $ textWidget [1, 2]),
-          (mkp 15 40, SomeWidget $ textWidget [1, 2])
+        [ (mkp 15 25, SomeWidget $ textWidget [1, 2]),
+          (mkp 15 50, SomeWidget $ textWidget [1, 2])
         ]
     }
 

@@ -115,5 +115,12 @@ width' = lens (\(SomeWidget w) -> w ^. width) (\(SomeWidget w) a -> SomeWidget (
 height' :: Lens' SomeWidget Int
 height' = lens (\(SomeWidget w) -> w ^. heigh) (\(SomeWidget w) a -> SomeWidget (w & heigh .~ a))
 
+
+path' :: Lens' SomeWidget [Int]
+path' = lens (\(SomeWidget w) -> w ^. path) (\(SomeWidget w) a -> SomeWidget (w & path .~ a))
+
+-- listIdex :: Lens' [a] Int 
+
+
 -- model' :: (WidgetRender model, WidgetHandler model) => Lens' SomeWidget model
 -- model' = lens (\(SomeWidget w) -> w ^. model) (\(SomeWidget w) a -> SomeWidget (w & model .~ a))
