@@ -73,7 +73,7 @@ inRectangle (P v0@(V2 x0 y0)) (Rectangle (P vs) size) =
 -- v0 > fmap fromIntegral vs && v0 < fmap fromIntegral (vs + size)
 
 instance WidgetHandler Body where
-  handler es a = mapM_ handler1 es >> return a
+  handler es a = mapM_ handler1 es >> return ()
     where
       handler1 e = do
         case eventPayload e of
@@ -129,7 +129,7 @@ instance WidgetRender Model where
 
 instance WidgetHandler Model where
   handler e a = do
-    return a
+    return ()
 
 textWidget :: [Int] -> Widget Text
 textWidget path =
@@ -152,7 +152,7 @@ instance WidgetRender Text where
       renderFont font renderer _model (fmap fromIntegral bp) _frontColor
 
 instance WidgetHandler Text where
-  handler e a = return a
+  handler e a = return ()
 
 initGUI :: IO (Renderer, Font, Manager)
 initGUI = do
@@ -188,8 +188,8 @@ appLoop1 = go
   where
     go = do
       e <- liftIO pollEvents
-      SomeWidget bodyW <- gets _bodyWidget
-      handler e Body
+      -- SomeWidget bodyW <- gets _bodyWidget
+      use bodyWidget >>= handlerSomeWidget e
 
       -- TODO: dispatch event to focus widget
 

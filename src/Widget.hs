@@ -24,9 +24,11 @@ import Control.Carrier.Reader
 import Control.Carrier.State.Strict
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Dynamic
 import Data.Foldable (forM_)
 import Data.Kind
 import Data.Text (Text, pack)
+import Data.Typeable
 import Data.Word (Word8)
 import MyLib
 import Optics
@@ -34,8 +36,6 @@ import SDL
 import SDL.Font as SF
 import SDL.Framerate
 import SDL.Primitive
-import Data.Typeable
-import Data.Dynamic
 
 {-
 Widget m
@@ -65,7 +65,7 @@ type UI sig m = Has (Reader UIEnv :+: State UIState) sig m --- very cool!!!!!!
 -- type Event' = Int
 
 class WidgetHandler a where
-  handler :: (UI sig m, MonadIO m) => [Event] -> a -> m a
+  handler :: (UI sig m, MonadIO m) => [Event] -> Widget a -> m ()
 
 --   handler :: Event' -> Widget sig m a -> m ()
 
@@ -109,6 +109,9 @@ makeLenses ''UIEnv
 renderSomeWidget :: (UI sig m, MonadIO m) => BasePositon -> SomeWidget -> m ()
 renderSomeWidget bp (SomeWidget w) = render bp w
 
+handlerSomeWidget :: (UI sig m, MonadIO m) => [Event] -> SomeWidget -> m ()
+handlerSomeWidget es (SomeWidget w) = handler es w
+
 children' :: Lens' SomeWidget [(BasePositon, SomeWidget)]
 children' = lens (\(SomeWidget w) -> w ^. children) (\(SomeWidget w) a -> SomeWidget (w & children .~ a))
 
@@ -118,12 +121,10 @@ width' = lens (\(SomeWidget w) -> w ^. width) (\(SomeWidget w) a -> SomeWidget (
 height' :: Lens' SomeWidget Int
 height' = lens (\(SomeWidget w) -> w ^. heigh) (\(SomeWidget w) a -> SomeWidget (w & heigh .~ a))
 
-
 path' :: Lens' SomeWidget [Int]
 path' = lens (\(SomeWidget w) -> w ^. path) (\(SomeWidget w) a -> SomeWidget (w & path .~ a))
 
--- listIdex :: Lens' [a] Int 
-
+-- listIdex :: Lens' [a] Int
 
 -- model' :: (WidgetRender model, WidgetHandler model) => Lens' SomeWidget model
 -- model' = lens (\(SomeWidget w) -> w ^. model) (\(SomeWidget w) a -> SomeWidget (w & model .~ a))
