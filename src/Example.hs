@@ -204,5 +204,5 @@ appLoop1 = go
 main :: IO ()
 main = do
   (r, f, m) <- initGUI
-  runReader (UIEnv r f m) $ runState makeUIState appLoop1
+  runReader (UIEnv r f m undefined) $ runState makeUIState appLoop1
   return ()
